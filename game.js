@@ -3,6 +3,9 @@ const STAR_ARCHETYPES = new Set([
   'SF_08','SF_09','PF_09','PF_10','C_10','C_11',
 ]);
 
+const CAP = 100_000_000;
+const CAP_DISPLAY = '$100M';
+
 let allPlayers = [];
 let roster = [];
 let centroids = {};
@@ -25,11 +28,68 @@ async function init() {
     roster = allPlayers.filter(p => ids.includes(p.id)).slice(0, 8);
     if (roster.length >= 5) {
       renderRoster();
+      updateCapMeter();
       runAnalysis();
       return;
     }
   }
   renderRoster();
+  updateCapMeter();
+}
+
+function rosterSalary() {
+  return roster.reduce((sum, p) => sum + (p.salary || 0), 0);
+}
+
+function isOverCap() {
+  return rosterSalary() > CAP;
+}
+
+function formatSalary(n) {
+  if (n >= 1_000_000) return '$' + (n / 1_000_000).toFixed(0) + 'M';
+  return '$' + n.toLocaleString();
+}
+
+function updateCapMeter() {
+  const used = rosterSalary();
+  const pct = Math.min(100, (used / CAP) * 100);
+  const over = used > CAP;
+
+  const meterFill = document.getElementById('cap-meter-fill');
+  const capUsed = document.getElementById('cap-used');
+  const capRemaining = document.getElementById('cap-remaining');
+  const capStatus = document.getElementById('cap-status');
+
+  meterFill.style.width = pct + '%';
+  meterFill.style.background = over
+    ? 'linear-gradient(90deg, #f87171, #ef4444)'
+    : pct > 85
+    ? 'linear-gradient(90deg, #fb923c, #f59e0b)'
+    : 'linear-gradient(90deg, #f59e0b, #4ade80)';
+
+  capUsed.textContent = formatSalary(used);
+  capRemaining.textContent = over
+    ? '−' + formatSalary(used - CAP) + ' OVER'
+    : formatSalary(CAP - used) + ' remaining';
+  capRemaining.style.color = over ? '#f87171' : '#9ca3af';
+
+  if (over) {
+    capStatus.textContent = '⚠ Over the cap — remove a player to analyze';
+    capStatus.style.color = '#f87171';
+    document.getElementById('analyze-btn').disabled = true;
+    document.getElementById('analyze-btn').classList.add('disabled');
+  } else {
+    capStatus.textContent = roster.length >= 5 ? '✓ Under the cap — ready to analyze' : 'Add at least 5 players';
+    capStatus.style.color = roster.length >= 5 ? '#4ade80' : '#9ca3af';
+    document.getElementById('analyze-btn').disabled = false;
+    document.getElementById('analyze-btn').classList.remove('disabled');
+  }
+
+  if (roster.length >= 5 && !over) {
+    document.getElementById('analyze-btn').classList.remove('hidden');
+  } else if (roster.length < 5) {
+    document.getElementById('analyze-btn').classList.add('hidden');
+  }
 }
 
 function getEra() {
@@ -108,6 +168,7 @@ function scoreRoster(players) {
     balanceScore: Math.max(20, Math.min(99, balanceScore)),
     era,
     comp: bestComp,
+    totalSalary: rosterSalary(),
   };
 }
 
@@ -124,20 +185,17 @@ function addPlayer(player) {
   if (roster.find(r => r.id === player.id)) return;
   roster.push(player);
   renderRoster();
+  updateCapMeter();
   document.getElementById('search-input').value = '';
   document.getElementById('search-results').innerHTML = '';
-  if (roster.length >= 5) {
-    document.getElementById('analyze-btn').classList.remove('hidden');
-  }
+  document.getElementById('result-panel').classList.add('hidden');
 }
 
 function removePlayer(id) {
   roster = roster.filter(p => p.id !== id);
   renderRoster();
+  updateCapMeter();
   document.getElementById('result-panel').classList.add('hidden');
-  if (roster.length < 5) {
-    document.getElementById('analyze-btn').classList.add('hidden');
-  }
 }
 
 function renderRoster() {
@@ -150,7 +208,7 @@ function renderRoster() {
       html += `<div class="player-slot filled">
         <div class="player-info">
           <span class="player-name">${p.name}</span>
-          <span class="player-meta">${p.archetype_label} · ${p.pts}pts</span>
+          <span class="player-meta">${p.archetype_label} · ${p.pts}pts · <span class="salary-tag">${p.salary_label}</span></span>
         </div>
         <button class="remove-btn" onclick="removePlayer('${p.id}')">✕</button>
       </div>`;
@@ -165,7 +223,7 @@ function renderRoster() {
 }
 
 function runAnalysis() {
-  if (roster.length < 5) return;
+  if (roster.length < 5 || isOverCap()) return;
 
   const resultPanel = document.getElementById('result-panel');
   const loadingEl = document.getElementById('loading');
@@ -213,7 +271,7 @@ function scoreColor(score) {
 }
 
 function renderResult(result) {
-  const {overall, offScore, defScore, balanceScore, era, comp} = result;
+  const {overall, offScore, defScore, balanceScore, era, comp, totalSalary} = result;
   const eraLabels = {era1: '1996–2004', era2: '2005–2015', era3: '2016–2026'};
 
   document.getElementById('score-number').textContent = overall + '%';
@@ -233,6 +291,8 @@ function renderResult(result) {
   document.getElementById('bal-bar').textContent = bar(balanceScore);
   document.getElementById('bal-bar').style.color = scoreColor(balanceScore);
 
+  document.getElementById('result-salary').textContent = `Total payroll: ${formatSalary(totalSalary)} of ${CAP_DISPLAY} cap`;
+
   document.getElementById('comp-name').textContent = comp.label;
   document.getElementById('comp-desc').textContent = comp.description;
   document.getElementById('comp-players').textContent = comp.players.slice(0, 5).join(' · ');
@@ -251,14 +311,14 @@ function renderResult(result) {
 }
 
 function copyShareText(result) {
-  const {overall, offScore, defScore, comp} = result;
-  const names = roster.slice(0, 5).map(p => p.name).join(', ');
+  const {overall, offScore, defScore, comp, totalSalary} = result;
   const text = `My NBA Championship DNA Score: ${overall}%
 
-Roster: ${roster.map(p => p.name).join(' · ')}
+Roster (${formatSalary(totalSalary)} cap):
+${roster.map(p => `• ${p.name} — ${p.salary_label}`).join('\n')}
 
 Offense: ${offScore}% | Defense: ${defScore}%
-Closest historical comp: ${comp.label}
+Closest comp: ${comp.label}
 "${comp.description}"
 
 Powered by DelQuant — 25 years of NBA intelligence
@@ -294,7 +354,7 @@ document.addEventListener('DOMContentLoaded', () => {
     results.innerHTML = matches.map(p =>
       `<div class="search-result" onclick="addPlayer(${JSON.stringify(p).replace(/"/g, '&quot;')})">
         <span class="result-name">${p.name}</span>
-        <span class="result-meta">${p.archetype_label} · ${p.pts}pts · ${p.position}</span>
+        <span class="result-meta">${p.archetype_label} · ${p.pts}pts · <span class="salary-tag-sm">${p.salary_label}</span></span>
       </div>`
     ).join('');
   });

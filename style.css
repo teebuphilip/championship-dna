@@ -223,6 +223,67 @@ body {
   margin-top: 8px;
 }
 
+/* ── Salary Cap Meter ── */
+.cap-meter-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+
+.cap-meter-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.cap-used {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.cap-meter-track {
+  height: 8px;
+  background: var(--surface2);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.cap-meter-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 4px;
+  transition: width 0.3s ease, background 0.3s ease;
+  background: linear-gradient(90deg, var(--gold), var(--green));
+}
+
+.cap-meter-footer {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+.salary-tag {
+  color: var(--gold);
+  font-weight: 600;
+}
+
+.salary-tag-sm {
+  color: var(--gold);
+  font-size: 11px;
+}
+
+.result-salary {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+  text-align: center;
+}
+
 /* ── Analyze button ── */
 #analyze-btn {
   width: 100%;
@@ -246,6 +307,13 @@ body {
 
 #analyze-btn:active {
   transform: translateY(0);
+}
+
+#analyze-btn.disabled,
+#analyze-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .hidden {

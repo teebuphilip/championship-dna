@@ -47,6 +47,20 @@
       <p class="roster-count" id="roster-count">0/8 players</p>
     </div>
 
+    <div class="cap-meter-section">
+      <div class="cap-meter-header">
+        <span class="section-title" style="margin:0">Salary Cap — $100M</span>
+        <span id="cap-used" class="cap-used">$0M</span>
+      </div>
+      <div class="cap-meter-track">
+        <div id="cap-meter-fill" class="cap-meter-fill"></div>
+      </div>
+      <div class="cap-meter-footer">
+        <span id="cap-status">Add at least 5 players</span>
+        <span id="cap-remaining">$100M remaining</span>
+      </div>
+    </div>
+
     <button id="analyze-btn" class="hidden">Analyze Championship DNA →</button>
 
     <div id="result-panel" class="hidden">
@@ -81,6 +95,7 @@
             <span class="score-value" id="bal-score"></span>
           </div>
 
+          <p id="result-salary" class="result-salary"></p>
           <hr class="divider">
 
           <div class="comp-section">
